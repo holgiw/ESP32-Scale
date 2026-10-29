@@ -1,0 +1,26 @@
+# Build-Ergebnisse und Zwischenstaende / build results and intermediate files
+build_waage/
+flash/
+waage/build/
+*.bin
+*.elf
+*.map
+
+# Visual Studio / Visual Micro
+.vs/
+__vm/
+*.user
+*.suo
+Debug/
+Release/
+
+# Werkzeug und lokale Dateien / tool and local files
+esptool.exe
+waage-settings*.txt
+_v2.html
+
+# Fremde Bilder (nur lokal als Vorlage) und Fritzing-Export mit Logo / foreign pictures (local reference only) and Fritzing export with logo
+LoadCellWiring.jpg
+c3_pinout.png
+hx711_pinout.png
+waage_verdrahtung_breadboard.svg
