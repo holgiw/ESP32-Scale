@@ -17,20 +17,25 @@ param(
     [string]$Folder = 'build_waage/esp32c3',
     [string]$Branch = 'main'
 )
-$ErrorActionPreference = 'Stop'
+# Continue statt Stop: Windows PowerShell 5.1 macht aus Textausgaben von git auf stderr sonst Fehler; Rueckgabewerte werden einzeln geprueft
+# Continue instead of Stop: Windows PowerShell 5.1 otherwise turns git's stderr text into errors; exit codes are checked one by one
+$ErrorActionPreference = 'Continue'
 $root = Split-Path $PSScriptRoot -Parent
 Set-Location $root
 
-if (git status --porcelain) { throw 'working tree is not clean - commit or stash first' }
+if (git status --porcelain --untracked-files=no) { throw 'tracked files have uncommitted changes - commit or stash first' }
 if ((git rev-parse --abbrev-ref HEAD).Trim() -ne $Branch) { throw "not on branch $Branch" }
 
 $tip = (git rev-parse HEAD).Trim()
-$old = @(git log --format=%H -- $Folder | Where-Object { $_ -ne $tip })
+# Aeltere Commits, in deren Stand die Firmware liegt (auch Commits ohne Aenderung daran, die sie nur mittragen)
+# Older commits whose state contains the firmware (also commits that did not change it but just carry it along)
+$old = @(git rev-list --branches --tags | Where-Object { $_ -ne $tip -and (git ls-tree -r --name-only $_ -- $Folder) })
 if ($old.Count -eq 0) { Write-Host 'Nothing to clean: only the newest commit contains the firmware.'; exit 0 }
 Write-Host "$($old.Count) older commit(s) contain the firmware and will be cleaned."
 
 $backup = Join-Path $env:TEMP ("repo-backup-{0}.bundle" -f (Get-Date -Format 'yyyyMMdd-HHmmss'))
 git bundle create $backup --all 2>&1 | Out-Null
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path $backup)) { throw 'backup bundle could not be created' }
 Write-Host "Backup: $backup"
 
 # Filter als Datei, damit keine Anfuehrungszeichen durch die Shell wandern / filter as a file so no quotes travel through the shell
@@ -39,7 +44,7 @@ $filter = Join-Path $env:TEMP 'waage-index-filter.sh'
 $env:KEEP_COMMIT = $tip
 $env:FILTER_BRANCH_SQUELCH_WARNING = '1'
 $shPath = $filter -replace '\\', '/'
-git filter-branch -f --index-filter "sh '$shPath'" --tag-name-filter cat -- --branches --tags 2>&1 | Select-Object -Last 3
+git filter-branch -f --index-filter "sh '$shPath'" --tag-name-filter cat -- --branches --tags 2>&1 | ForEach-Object { "$_" } | Select-Object -Last 3
 if ($LASTEXITCODE -ne 0) { throw 'git filter-branch failed (backup: ' + $backup + ')' }
 
 # Sicherungsreferenzen und alte Objekte entfernen / remove backup refs and old objects
