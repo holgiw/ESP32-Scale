@@ -80,7 +80,7 @@ if ($boards.Count -eq 0) { Write-Host 'Keine Waage am USB. / No scale on USB.' }
 foreach ($b in $boards) {
     if ($CheckOnly) { Write-Host "COM$($b.Port): ESP32-C3"; continue }
     if (-not (Ask "COM$($b.Port) (ESP32-C3) mit dem Build aus build_waage flashen / flash with the build from build_waage?")) { continue }
-    $args2 = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "$root\waagesetup.ps1", '-Port', $b.Port)
+    $args2 = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "$root\build_waage\waagesetup.ps1", '-Port', $b.Port)
     if (-not $Yes) { $args2 += '-AskWifi' }
     & powershell @args2
     if ($LASTEXITCODE -ne 0) { Write-Host "  Flashen fehlgeschlagen / flashing failed (COM$($b.Port))"; $failed++ }

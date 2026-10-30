@@ -1,17 +1,19 @@
 # SPDX-License-Identifier: GPL-3.0-only (siehe / see LICENSE)
 # Flasht die Waage (ESP32-C3) per USB und richtet das WLAN ein, Aufruf aus flashESP.bat.
-#   Ohne -Port (Doppelklick auf flashESP.bat): sucht die Waage, fragt nach dem WLAN, flasht die Dateien aus diesem
-#   Unterordner flash (von build.bat erzeugt) und sendet danach das WLAN per USB ("WAAGE WIFI <Name-Hex> <Passwort-Hex>",
+#   Ohne -Port (Doppelklick auf flashESP.bat): sucht die Waage, fragt nach dem WLAN, flasht die Dateien aus dem Ordner
+#   esp32c3 neben diesem Skript (von buildAll.bat); fehlt er, laedt das Skript waage-esp32c3.zip vom neuesten GitHub-Release
+#   (SHA-256 geprueft). -Download erzwingt das Laden, WAAGE_BUILD_URL ersetzt die Adresse (Test). Danach sendet es das WLAN per USB ("WAAGE WIFI <Name-Hex> <Passwort-Hex>",
 #   "WAAGE RESTART", siehe handleSerialLine() in waage.ino). Enter bei der WLAN-Frage = WLAN nicht aendern.
 #   Mit -Port ohne Rueckfragen. Das WLAN-Passwort bleibt nur im Speicher dieses Skripts und geht nur per USB an die Waage.
 #
 # Flashes the scale (ESP32-C3) via USB and sets up the WiFi, called from flashESP.bat.
-#   Without -Port (double-click on flashESP.bat): finds the scale, asks for the WiFi, flashes the files from this
-#   subfolder flash (made by build.bat) and afterwards sends the WiFi via USB ("WAAGE WIFI <name hex> <password hex>",
+#   Without -Port (double-click on flashESP.bat): finds the scale, asks for the WiFi, flashes the files from the folder
+#   esp32c3 next to this script (from buildAll.bat); if it is missing, the script downloads waage-esp32c3.zip from the newest
+#   GitHub release (SHA-256 checked). -Download forces the download, WAAGE_BUILD_URL replaces the address (test). Afterwards it sends the WiFi via USB ("WAAGE WIFI <name hex> <password hex>",
 #   "WAAGE RESTART", see handleSerialLine() in waage.ino). Enter at the WiFi question = leave WiFi unchanged.
 #   -AskWifi  fragt auch mit -Port nach dem WLAN (flashAll.ps1) / asks for the WiFi even with -Port (flashAll.ps1)
 #   With -Port without questions. The WiFi password stays only in this script's memory and only goes to the scale via USB.
-param([string]$Port, [switch]$AskWifi)
+param([string]$Port, [switch]$AskWifi, [switch]$Download, [switch]$FetchTools)
 
 function ConvertTo-Hex([string]$text) {
     -join ([System.Text.Encoding]::UTF8.GetBytes($text) | ForEach-Object { $_.ToString('x2') })
@@ -204,28 +206,127 @@ function Send-Command($sp, [string]$cmd) {
 # ---------------------------------------------------------------------------
 # Ablauf / flow
 $interactive = -not $Port
-$binDir = Join-Path $PSScriptRoot 'flash'
+$buildUrl = if ($env:WAAGE_BUILD_URL) { $env:WAAGE_BUILD_URL.TrimEnd('/') } else { 'https://github.com/holgiw/ESP32-Scale/releases/latest/download' }
+
+function New-WebClient {
+    [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+    $wc = New-Object System.Net.WebClient
+    $wc.Headers.Add('User-Agent', 'waage-flash')
+    $wc.Proxy = [Net.WebRequest]::GetSystemWebProxy()
+    $wc.Proxy.Credentials = [Net.CredentialCache]::DefaultCredentials
+    return $wc
+}
 
 # esptool.exe: neben diesem Skript, sonst das aus dem Arduino-ESP32-Core (Arduino IDE)
 # esptool.exe: next to this script, otherwise the one from the Arduino ESP32 core (Arduino IDE)
-$esptool = Join-Path $PSScriptRoot 'esptool.exe'
-if (-not (Test-Path $esptool)) {
+function Find-Esptool {
+    $local = Join-Path $PSScriptRoot 'esptool.exe'
+    if (Test-Path $local) { return $local }
     $core = Get-ChildItem "$env:LOCALAPPDATA\Arduino15\packages\esp32\tools\esptool_py\*\esptool.exe" -ErrorAction SilentlyContinue | Sort-Object FullName | Select-Object -Last 1
-    if ($core) { $esptool = $core.FullName }
+    if ($core) { return $core.FullName }
+    return $null
 }
-if (-not (Test-Path $esptool)) {
-    Write-Host 'esptool.exe nicht gefunden (neben diesem Skript oder im Arduino-ESP32-Core). / esptool.exe not found (next to this script or in the Arduino ESP32 core).'
-    exit 1
+
+# Fehlt esptool.exe (zum Beispiel nach "Download ZIP" des Repositorys, ohne Arduino IDE), wird es aus waage_flash.zip des neuesten
+# Releases geholt (SHA-256 geprueft) und neben dieses Skript gelegt; -FetchTools erzwingt das (Test).
+# If esptool.exe is missing (for example after "Download ZIP" of the repository, without the Arduino IDE), it is fetched from
+# waage_flash.zip of the newest release (SHA-256 checked) and put next to this script; -FetchTools forces it (test).
+function Get-EsptoolFromRelease {
+    $name = 'waage_flash'
+    $work = Join-Path ([IO.Path]::GetTempPath()) "waage-tools$([IO.Path]::DirectorySeparatorChar)$name"
+    if (Test-Path $work) { Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue }
+    New-Item -ItemType Directory -Path $work -Force | Out-Null
+    $zip = Join-Path $work "$name.zip"
+    Write-Host "esptool.exe fehlt - wird geladen (rund 7 MB) / esptool.exe is missing - downloading it (about 7 MB): $buildUrl/$name.zip"
+    try {
+        $wc = New-WebClient
+        $shaText = $wc.DownloadString("$buildUrl/$name.sha256")
+        $wc.DownloadFile("$buildUrl/$name.zip", $zip)
+    }
+    catch {
+        Write-Host "Download fehlgeschlagen / download failed: $($_.Exception.Message)"
+        return $null
+    }
+    $want = ($shaText.Trim() -split '\s+')[0].ToLower()
+    if ((Get-FileHash -Algorithm SHA256 $zip).Hash.ToLower() -ne $want) {
+        Write-Host 'Pruefsumme von waage_flash.zip stimmt nicht. / Checksum of waage_flash.zip does not match.'
+        return $null
+    }
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $archive = [System.IO.Compression.ZipFile]::OpenRead($zip)
+    try {
+        $entry = $archive.Entries | Where-Object { $_.Name -eq 'esptool.exe' } | Select-Object -First 1
+        if (-not $entry) { return $null }
+        $target = Join-Path $PSScriptRoot 'esptool.exe'
+        try { [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $target, $true) }
+        catch {
+            $target = Join-Path $work 'esptool.exe'
+            [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $target, $true)
+        }
+        return $target
+    }
+    finally { $archive.Dispose() }
 }
-$files = @('waage.ino.bootloader.bin', 'waage.ino.partitions.bin', 'boot_app0.bin', 'waage.ino.bin')
-$missing = $files | Where-Object { -not (Test-Path (Join-Path $binDir $_)) }
-if ($missing) {
-    Write-Host "Fehlende Dateien / missing files: $($missing -join ', ')"
-    Write-Host 'Zuerst build.bat im Projektordner ausfuehren (erzeugt die Dateien im Unterordner flash).'
-    Write-Host 'Run build.bat in the project folder first (it creates the files in the subfolder flash).'
+
+$esptool = if ($FetchTools) { $null } else { Find-Esptool }
+if (-not $esptool) { $esptool = Get-EsptoolFromRelease }
+if (-not $esptool) {
+    Write-Host 'esptool.exe nicht gefunden und nicht ladbar - neben dieses Skript legen (waage_flash.zip) oder den ESP32-Core in der Arduino IDE installieren.'
+    Write-Host 'esptool.exe not found and not downloadable - put it next to this script (waage_flash.zip) or install the ESP32 core in the Arduino IDE.'
     exit 1
 }
 
+# Ordner esp32c3 neben dem Skript (buildAll.bat), sonst Download des Pakets vom neuesten GitHub-Release, per SHA-256 geprueft.
+# Folder esp32c3 next to the script (buildAll.bat), otherwise download of the package from the newest GitHub release, checked by SHA-256.
+$files = @('waage.ino.bootloader.bin', 'waage.ino.partitions.bin', 'boot_app0.bin', 'waage.ino.bin')
+
+function Get-BuildDir {
+    $name = 'waage-esp32c3'
+    $work = Join-Path ([IO.Path]::GetTempPath()) "waage-flash$([IO.Path]::DirectorySeparatorChar)$name"
+    if (Test-Path $work) { Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue }
+    New-Item -ItemType Directory -Path $work -Force | Out-Null
+    $zip = Join-Path $work "$name.zip"
+    Write-Host "Build wird geladen / downloading the build: $buildUrl/$name.zip"
+    try {
+        $wc = New-WebClient
+        $shaText = $wc.DownloadString("$buildUrl/$name.sha256")
+        $wc.DownloadFile("$buildUrl/$name.zip", $zip)
+    }
+    catch {
+        Write-Host "Download fehlgeschlagen / download failed: $($_.Exception.Message)"
+        Write-Host 'Internetverbindung des PCs pruefen (GitHub erreichbar?), dann erneut starten.'
+        Write-Host 'Check the PC internet connection (is GitHub reachable?), then start again.'
+        exit 1
+    }
+    $want = ($shaText.Trim() -split '\s+')[0].ToLower()
+    $have = (Get-FileHash -Algorithm SHA256 $zip).Hash.ToLower()
+    if ($want -ne $have) {
+        Write-Host 'Pruefsumme der geladenen Datei stimmt nicht - nichts wird geflasht. Spaeter erneut versuchen.'
+        Write-Host 'Checksum of the downloaded file does not match - nothing is flashed. Try again later.'
+        exit 1
+    }
+    $out = Join-Path $work 'files'
+    Expand-Archive -Path $zip -DestinationPath $out -Force
+    $lack = $files | Where-Object { -not (Test-Path (Join-Path $out $_)) }
+    if ($lack) {
+        Write-Host "Das Paket ist unvollstaendig / the package is incomplete: $($lack -join ', ')"
+        exit 1
+    }
+    return $out
+}
+
+$binDir = Join-Path $PSScriptRoot 'esp32c3'
+$missing = @($files | Where-Object { -not (Test-Path (Join-Path $binDir $_)) })
+if ($Download -or $env:WAAGE_DOWNLOAD -eq '1' -or $missing.Count -gt 0) {
+    if ($missing.Count -gt 0 -and -not $Download) {
+        Write-Host 'Kein lokaler Build (esp32c3) - das Paket wird vom GitHub-Release geladen.'
+        Write-Host 'No local build (esp32c3) - the package is downloaded from the GitHub release.'
+    }
+    $binDir = Get-BuildDir
+    Write-Host 'Build vom GitHub-Release / build from the GitHub release.'
+} else {
+    Write-Host "Build aus dem lokalen Ordner / build from the local folder: $binDir"
+}
 # 1) Waage suchen / find the scale
 $ports = @(Get-ScalePorts)
 if ($Port) { $num = [int]($Port -replace '\D', '') }

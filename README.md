@@ -2,6 +2,10 @@
 
 [Deutsch](#deutsch) · [English](#english)
 
+> **Fertige Firmware:** Das Zip von *Code → Download ZIP* enthält die vier Flash-Dateien in uild_waage/esp32c3/; zum Flashen reicht uild_waage/flashESP.bat. Die vollständige merged.bin und das Werkzeug-Zip (waage_flash.zip mit sptool.exe) liegen im neuesten [Release](../../releases) unter *Assets*.
+>
+> **Ready firmware:** the zip from *Code → Download ZIP* contains the four flash files in uild_waage/esp32c3/; uild_waage/flashESP.bat is enough to flash. The complete merged.bin and the tools zip (waage_flash.zip with sptool.exe) are in the newest [release](../../releases) under *Assets*.
+
 ---
 
 ## Deutsch
@@ -102,11 +106,12 @@ Voraussetzung: Windows, Arduino IDE 2 (liefert `arduino-cli` und den ESP32-Core 
 
 | Datei | Aufgabe |
 |---|---|
-| `buildAll.bat` | baut den ESP32-C3 und kopiert die Ergebnisse nach `build_waage\esp32c3` und `flash` |
-| `flashESP.bat` | Doppelklick: Waage per USB suchen, WLAN abfragen, flashen, WLAN per USB senden |
+| `buildAll.bat` | baut den ESP32-C3 (ohne Benutzernamen im Binary) und kopiert die Ergebnisse nach `build_waage\esp32c3` |
+| `build_waage\flashESP.bat` | Doppelklick: Waage per USB suchen, WLAN abfragen, flashen, WLAN per USB senden; nimmt `build_waage\esp32c3`, sonst das Paket vom neuesten Release |
+| `build_waage\publish_builds.ps1` | erzeugt die Release-Pakete (Firmware-Zip, Werkzeug-Zip, `merged.bin`, Prüfsummen) und lädt sie mit `-Upload` hoch |
 | `checkDevices.ps1` | sucht Waagen im Netz, zeigt Firmware-Stand (Build-Zeit), HX711, MQTT und Uhrzeit |
 | `flashAll.bat` | prüft, fragt (Enter = Ja) und flasht veraltete Waagen per WLAN (OTA) und per USB |
-| `build.bat` | älteres Einzelskript (baut nach `flash`, optional mit OTA-Upload) |
+| `build.bat` | älteres Einzelskript (baut nach `build_waage\esp32c3`, optional mit OTA-Upload) |
 | `makeWiringHeader.ps1` | erzeugt `waage\wiring_svg.h` aus `verkabelung.svg`; `buildAll.bat` ruft es vor jedem Build auf |
 
 ```
@@ -118,9 +123,9 @@ flashAll.bat -Force        auch aktuelle Waagen neu einspielen
 
 Board-Einstellungen: ESP32C3 Dev Module, USB CDC On Boot = Enabled, 80 MHz, QIO, 4 MB, Partitionsschema „Minimal SPIFFS (1.9MB APP with OTA)“. In der Arduino IDE oder Visual Micro dieselben Einstellungen wählen, sonst passt das Partitionsschema nicht zu OTA. Bei Builds ohne `buildAll.bat` das Skript `makeWiringHeader.ps1` nach einer Änderung der `.svg` einmal von Hand ausführen.
 
-`flashESP.bat` und `flashAll.bat` brauchen `esptool.exe`: Liegt keines neben den Skripten, nehmen sie das aus dem Arduino-ESP32-Core. Den Stand erkennt `checkDevices.ps1` an der Kennung `WAAGE_FW_BUILD=` in der `.bin` und an `"version"` in `/api/topbarStatus`. `flashAll` listet jedes ESP32-C3 am USB und fragt vor dem Flashen.
+`flashESP.bat` und `flashAll.bat` brauchen `esptool.exe`: Liegt keines neben den Skripten, nehmen sie das aus dem Arduino-ESP32-Core, `flashESP.bat` sonst aus `waage_flash.zip` des Releases (SHA-256 geprüft). Den Stand erkennt `checkDevices.ps1` an der Kennung `WAAGE_FW_BUILD=` in der `.bin` und an `"version"` in `/api/topbarStatus`. `flashAll` listet jedes ESP32-C3 am USB und fragt vor dem Flashen.
 
-**Fertige Builds** stehen bei den [Releases](../../releases) (`waage-esp32c3.zip` mit Prüfsumme). Das Zip enthält den Ordner `build_waage` mit `flashESP.bat`, `waagesetup.ps1`, `esptool.exe`, `readme.txt` und der Firmware im Unterordner `flash`; das Zip auspacken und `flashESP.bat` starten (siehe `readme.txt`). Das Paket erzeugt `publishRelease.ps1`. Per USB, zum Beispiel mit esptool:
+**Fertige Builds** stehen bei den [Releases](../../releases) (`waage-esp32c3.zip` mit Prüfsumme). Zum Flashen das Werkzeug-Zip `waage_flash.zip` auspacken und `build_waage\flashESP.bat` starten (siehe `readme.txt`); es enthält `esptool.exe` samt Lizenztext und die Firmware in `esp32c3`. `waage-<Version>-esp32c3-merged.bin` ist das ganze Abbild für Adresse 0x0. Die Pakete erzeugt `build_waage\publish_builds.ps1`. Per USB, zum Beispiel mit esptool:
 
 ```
 esptool --chip esp32c3 --port COM3 --baud 921600 write_flash 0x0 waage.ino.bootloader.bin 0x8000 waage.ino.partitions.bin 0xe000 boot_app0.bin 0x10000 waage.ino.bin
@@ -136,7 +141,7 @@ Nicht die `merged.bin` verwenden, wenn die Einstellungen erhalten bleiben sollen
 
 ### Lizenz
 
-GNU General Public License v3.0, siehe [LICENSE](LICENSE). Die Lizenzen der eingesetzten Software stehen in [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
+GNU General Public License v3.0, siehe [LICENSE](LICENSE). Die Lizenzen der eingesetzten Software stehen in [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md). `esptool.exe` (Espressif, GPL-2.0-or-later, [Quelltext](https://github.com/espressif/esptool)) liegt nicht im Repository, sondern unverändert mit Lizenztext nur im Werkzeug-Zip des Releases.
 
 ## Kontakt
 
@@ -193,9 +198,9 @@ GET returns `{"broker":"...","port":1883,"connected":true}`. POST sets only the 
 
 ### Build and flash
 
-Requires Windows, Arduino IDE 2 (provides `arduino-cli` and the ESP32 core 3.x) and the **PubSubClient** library. `buildAll.bat` builds the ESP32-C3 into `build_waage\esp32c3` and `flash`; `flashESP.bat` flashes one device over USB; `flashAll.bat` checks all scales on the network and updates outdated ones (OTA or USB); `checkDevices.ps1` lists them. Board: ESP32C3 Dev Module, USB CDC On Boot enabled, 80 MHz, QIO, 4 MB, partition scheme "Minimal SPIFFS (1.9MB APP with OTA)". Without `buildAll.bat`, run `makeWiringHeader.ps1` once by hand after changing `verkabelung.svg`.
+Requires Windows, Arduino IDE 2 (provides `arduino-cli` and the ESP32 core 3.x) and the **PubSubClient** library. `buildAll.bat` builds the ESP32-C3 (without a user name in the binary) into `build_waage\esp32c3`; `build_waage\flashESP.bat` flashes one device over USB (local build, otherwise the package from the newest release); `build_waage\publish_builds.ps1` creates the release packages; `flashAll.bat` checks all scales on the network and updates outdated ones (OTA or USB); `checkDevices.ps1` lists them. Board: ESP32C3 Dev Module, USB CDC On Boot enabled, 80 MHz, QIO, 4 MB, partition scheme "Minimal SPIFFS (1.9MB APP with OTA)". Without `buildAll.bat`, run `makeWiringHeader.ps1` once by hand after changing `verkabelung.svg`.
 
-Ready builds are in the [Releases](../../releases) (`waage-esp32c3.zip` with checksum). The zip contains the folder `build_waage` with `flashESP.bat`, `waagesetup.ps1`, `esptool.exe`, `readme.txt` and the firmware in the subfolder `flash`; unpack the zip and start `flashESP.bat` (see `readme.txt`). `publishRelease.ps1` creates the package. Over USB, for example with esptool:
+Ready builds are in the [Releases](../../releases) (`waage-esp32c3.zip` with checksum). To flash, unpack the tools zip `waage_flash.zip` and start `build_waage\flashESP.bat` (see `readme.txt`); it contains `esptool.exe` with its license text and the firmware in `esp32c3`. `waage-<version>-esp32c3-merged.bin` is the whole image for address 0x0. `build_waage\publish_builds.ps1` creates the packages. Over USB, for example with esptool:
 
 ```
 esptool --chip esp32c3 --port COM3 --baud 921600 write_flash 0x0 waage.ino.bootloader.bin 0x8000 waage.ino.partitions.bin 0xe000 boot_app0.bin 0x10000 waage.ino.bin
@@ -209,7 +214,7 @@ The log is kept in RAM only. The web interface has no password and is meant for 
 
 ### License
 
-GNU General Public License v3.0, see [LICENSE](LICENSE). Licenses of the software used are in [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
+GNU General Public License v3.0, see [LICENSE](LICENSE). Licenses of the software used are in [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md). `esptool.exe` (Espressif, GPL-2.0-or-later, [source](https://github.com/espressif/esptool)) is not in the repository; it is shipped unchanged with its license text only in the tools zip of the release.
 
 ## Contact
 

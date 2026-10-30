@@ -1,10 +1,11 @@
 # Build-Ergebnisse und Zwischenstaende / build results and intermediate files
-build_waage/
-flash/
 waage/build/
 *.bin
 *.elf
 *.map
+# nur die vier Dateien des Chips werden eingecheckt (damit das Repository-Zip flashbar ist), nicht die merged.bin / only the four chip files are committed (so the repository zip can be flashed), not merged.bin
+!build_waage/esp32c3/*.bin
+build_waage/esp32c3/*.merged.bin
 
 # Visual Studio / Visual Micro
 .vs/

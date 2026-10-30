@@ -11,8 +11,16 @@ It uses the following software, which is not part of this repository and comes w
 | [arduino-esp32](https://github.com/espressif/arduino-esp32) (WiFi, WebServer, ArduinoOTA, Preferences, ESPmDNS, Network, Update) | 3.3.x | LGPL-2.1-or-later | Arduino-Core, in der Firmware enthalten / Arduino core, included in the firmware |
 | [ESP-IDF](https://github.com/espressif/esp-idf) (FreeRTOS, lwIP, newlib, Systemkomponenten / system components) | mit dem Core / with the core | Apache-2.0, teils MIT/BSD / partly MIT/BSD | Grundlage des Cores, in der Firmware enthalten / base of the core, included in the firmware |
 | [PubSubClient](https://github.com/knolleary/pubsubclient) | 2.8 | MIT | MQTT-Client, in der Firmware enthalten / MQTT client, included in the firmware |
-| [esptool](https://github.com/espressif/esptool) | aus dem Core / from the core | GPL-2.0-or-later | nur von den Flash-Skripten aufgerufen, nicht ausgeliefert / only called by the flash scripts, not distributed |
+| [esptool](https://github.com/espressif/esptool) | 4.8.1 (Werkzeug-Zip) / 4.8.1 (tools zip) | GPL-2.0-or-later | nicht im Repository; unveraendert nur im Werkzeug-Zip `waage_flash.zip` des Releases, mit Lizenztext `esptool-LICENSE.txt` und Hinweis `esptool-NOTICE.txt` / not in the repository; unchanged only in the tools zip `waage_flash.zip` of the release, with the license text `esptool-LICENSE.txt` and the note `esptool-NOTICE.txt` |
 | [Fritzing](https://fritzing.org) Teil "HX711 Weighing Sensor Module" | Fritzing-Kern / Fritzing core | CC BY-SA 3.0 | nur als Verweis in `waage_verdrahtung.fzz`, nicht enthalten / only referenced in `waage_verdrahtung.fzz`, not included |
+
+## esptool (GPL-2.0-or-later)
+
+Copyright (c) Fredrik Ahlberg, Angus Gratton, Espressif Systems (Shanghai) CO LTD, other contributors as noted.
+
+esptool.exe liegt nicht in diesem Repository. Das Werkzeug-Zip des Releases (waage_flash.zip) enthaelt es unveraendert nur zum Flashen, zusammen mit dem Lizenztext (esptool-LICENSE.txt, GNU General Public License Version 2) und einem Hinweis (esptool-NOTICE.txt). Der Quelltext steht unter https://github.com/espressif/esptool.
+
+esptool.exe is not in this repository. The tools zip of the release (waage_flash.zip) contains it unchanged, only for flashing, together with the license text (esptool-LICENSE.txt, GNU General Public License version 2) and a note (esptool-NOTICE.txt). The source code is at https://github.com/espressif/esptool.
 
 ## arduino-esp32 (LGPL-2.1-or-later)
 

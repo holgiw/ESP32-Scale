@@ -4,7 +4,7 @@ rem Baut die Waage-Firmware mit arduino-cli (der Arduino IDE) fuer den ESP32-C3.
 rem   buildAll.bat              baut den ESP32-C3 (einziges Ziel)
 rem   buildAll.bat c3           dasselbe, Chip ausdruecklich genannt
 rem Nach einem erfolgreichen Build werden die fertigen Dateien nach build_waage\esp32c3 kopiert (fuer flashAll.ps1 und
-rem checkDevices.ps1) und zusaetzlich nach flash (fuer flashESP.bat). Der Zwischenstand liegt in %TEMP%\waage-build\[chip]
+rem checkDevices.ps1) (auch fuer flashESP.bat). Der Zwischenstand liegt in %TEMP%\waage-build\[chip]
 rem (spaetere Laeufe sind schneller), das Protokoll in %TEMP%\waage-build\[chip].log. Chips werden nacheinander gebaut:
 rem parallele Laeufe teilen sich Zwischenordner im Sketch-Cache und stoeren einander.
 rem Board: ESP32C3 Dev Module, USB CDC On Boot = Enabled, 80 MHz, QIO, 4 MB, Partitionsschema "Minimal SPIFFS (1.9MB APP
@@ -14,7 +14,7 @@ rem Builds the scale firmware with arduino-cli (from the Arduino IDE) for the ES
 rem   buildAll.bat              builds the ESP32-C3 (only target)
 rem   buildAll.bat c3           the same, chip named explicitly
 rem After a successful build the finished files are copied to build_waage\esp32c3 (for flashAll.ps1 and checkDevices.ps1)
-rem and additionally to flash (for flashESP.bat). The intermediate state is in %TEMP%\waage-build\[chip] (later runs are
+rem (also for flashESP.bat). The intermediate state is in %TEMP%\waage-build\[chip] (later runs are
 rem faster), the log in %TEMP%\waage-build\[chip].log. Chips are built one after another: parallel runs share
 rem intermediate folders in the sketch cache and disturb each other.
 rem Board: ESP32C3 Dev Module, USB CDC On Boot = Enabled, 80 MHz, QIO, 4 MB, partition scheme "Minimal SPIFFS (1.9MB APP
@@ -102,10 +102,10 @@ for /d %%D in ("%LOCALAPPDATA%\Arduino15\packages\esp32\hardware\esp32\*") do (
     if exist "%%D\tools\partitions\boot_app0.bin" set "BOOTAPP=%%D\tools\partitions\boot_app0.bin"
 )
 
-for %%T in ("build_waage\%DIR%" "flash") do (
+for %%T in ("build_waage\%DIR%") do (
     if not exist "%%~T" mkdir "%%~T"
     for %%F in (waage.ino.bin waage.ino.bootloader.bin waage.ino.partitions.bin waage.ino.merged.bin) do copy /y "%OUT%\%CHIP%\%%F" "%%~T\" >nul
     if defined BOOTAPP copy /y "!BOOTAPP!" "%%~T\boot_app0.bin" >nul
 )
-echo %CHIP%: nach build_waage\%DIR% und flash kopiert / copied to build_waage\%DIR% and flash
+echo %CHIP%: nach build_waage\%DIR% kopiert / copied to build_waage\%DIR%
 exit /b 0
