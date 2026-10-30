@@ -109,6 +109,7 @@ Voraussetzung: Windows, Arduino IDE 2 (liefert `arduino-cli` und den ESP32-Core 
 | `buildAll.bat` | baut den ESP32-C3 (ohne Benutzernamen im Binary) und kopiert die Ergebnisse nach `build_waage\esp32c3` |
 | `build_waage\flashESP.bat` | Doppelklick: Waage per USB suchen, WLAN abfragen, flashen, WLAN per USB senden; nimmt `build_waage\esp32c3`, sonst das Paket vom neuesten Release |
 | `build_waage\publish_builds.ps1` | erzeugt die Release-Pakete (Firmware-Zip, Werkzeug-Zip, `merged.bin`, Prüfsummen) und lädt sie mit `-Upload` hoch |
+| `build_waage\cleanup_history.ps1` | nach dem Commit eines neuen Builds: entfernt die Firmware aus allen älteren Commits (nur `HEAD` behält sie); mit `-Push` per Force-Push |
 | `checkDevices.ps1` | sucht Waagen im Netz, zeigt Firmware-Stand (Build-Zeit), HX711, MQTT und Uhrzeit |
 | `flashAll.bat` | prüft, fragt (Enter = Ja) und flasht veraltete Waagen per WLAN (OTA) und per USB |
 | `build.bat` | älteres Einzelskript (baut nach `build_waage\esp32c3`, optional mit OTA-Upload) |
@@ -198,7 +199,7 @@ GET returns `{"broker":"...","port":1883,"connected":true}`. POST sets only the 
 
 ### Build and flash
 
-Requires Windows, Arduino IDE 2 (provides `arduino-cli` and the ESP32 core 3.x) and the **PubSubClient** library. `buildAll.bat` builds the ESP32-C3 (without a user name in the binary) into `build_waage\esp32c3`; `build_waage\flashESP.bat` flashes one device over USB (local build, otherwise the package from the newest release); `build_waage\publish_builds.ps1` creates the release packages; `flashAll.bat` checks all scales on the network and updates outdated ones (OTA or USB); `checkDevices.ps1` lists them. Board: ESP32C3 Dev Module, USB CDC On Boot enabled, 80 MHz, QIO, 4 MB, partition scheme "Minimal SPIFFS (1.9MB APP with OTA)". Without `buildAll.bat`, run `makeWiringHeader.ps1` once by hand after changing `verkabelung.svg`.
+Requires Windows, Arduino IDE 2 (provides `arduino-cli` and the ESP32 core 3.x) and the **PubSubClient** library. `buildAll.bat` builds the ESP32-C3 (without a user name in the binary) into `build_waage\esp32c3`; `build_waage\flashESP.bat` flashes one device over USB (local build, otherwise the package from the newest release); `build_waage\publish_builds.ps1` creates the release packages; `build_waage\cleanup_history.ps1` removes the firmware from all older commits after a new build is committed; `flashAll.bat` checks all scales on the network and updates outdated ones (OTA or USB); `checkDevices.ps1` lists them. Board: ESP32C3 Dev Module, USB CDC On Boot enabled, 80 MHz, QIO, 4 MB, partition scheme "Minimal SPIFFS (1.9MB APP with OTA)". Without `buildAll.bat`, run `makeWiringHeader.ps1` once by hand after changing `verkabelung.svg`.
 
 Ready builds are in the [Releases](../../releases) (`waage-esp32c3.zip` with checksum). To flash, unpack the tools zip `waage_flash.zip` and start `build_waage\flashESP.bat` (see `readme.txt`); it contains `esptool.exe` with its license text and the firmware in `esp32c3`. `waage-<version>-esp32c3-merged.bin` is the whole image for address 0x0. `build_waage\publish_builds.ps1` creates the packages. Over USB, for example with esptool:
 
