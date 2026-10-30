@@ -24,10 +24,10 @@ foreach ($f in $firmware) { if (-not (Test-Path (Join-Path $src $f))) { throw "m
 
 # Der Build darf keinen Benutzernamen enthalten (buildAll.bat setzt -ffile-prefix-map) / the build must not contain a user name
 $bad = foreach ($f in $firmware) {
-    $t = [Text.Encoding]::Latin1.GetString([IO.File]::ReadAllBytes((Join-Path $src $f)))
-    if ($t.Contains($env:USERNAME)) { $f }
+    $t = [Text.Encoding]::GetEncoding(28591).GetString([IO.File]::ReadAllBytes((Join-Path $src $f)))
+    if ($t.Contains($([Environment]::UserName))) { $f }
 }
-if ($bad) { throw "user name '$env:USERNAME' found in: $($bad -join ', ')" }
+if ($bad) { throw "user name '$([Environment]::UserName)' found in: $($bad -join ', ')" }
 
 $esp = Join-Path $PSScriptRoot 'esptool.exe'
 if (-not (Test-Path $esp)) {
