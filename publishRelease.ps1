@@ -50,7 +50,15 @@ $notice = "esptool.exe gehoert nicht zur Waage. Es ist esptool von Espressif (ht
 [IO.File]::WriteAllText((Join-Path $bw 'esptool-NOTICE.txt'), $notice, (New-Object Text.UTF8Encoding($false)))
 
 $zip = Join-Path $OutDir 'waage-esp32c3.zip'
-[IO.Compression.ZipFile]::CreateFromDirectory($stage, $zip)
+# Eintraege mit Schraegstrich anlegen (CreateFromDirectory schreibt in Windows PowerShell 5.1 Rueckstriche) / entries with forward slashes
+$za = [IO.Compression.ZipFile]::Open($zip, 'Create')
+try {
+    foreach ($f in Get-ChildItem $stage -Recurse -File) {
+        $name = $f.FullName.Substring($stage.Length + 1).Replace('\', '/')
+        [void][IO.Compression.ZipFileExtensions]::CreateEntryFromFile($za, $f.FullName, $name, 'Optimal')
+    }
+}
+finally { $za.Dispose() }
 Remove-Item $stage -Recurse -Force
 $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
 $sha = Join-Path $OutDir 'waage-esp32c3.sha256'
