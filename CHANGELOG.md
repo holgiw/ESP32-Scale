@@ -9,6 +9,7 @@
 - Einstellungen exportieren und importieren, MQTT-Broker per `/api/mqtt` setzen, Sicherheitsabfragen bei Tara und Kalibrierung.
 - Hinweis bei fehlendem HX711 oder fehlender Wägezelle, MQTT-Status `hx711`, Offline-Anzeige der Seite.
 - Update per WLAN (ArduinoOTA), Einrichtung des WLANs per USB, Skripte `buildAll.bat`, `checkDevices.ps1`, `flashAll.bat`, `flashESP.bat`.
+- Release-Zip mit Ordner `build_waage` (Flash-Skripte, `esptool.exe`, `readme.txt`, Firmware) wie bei der Uhr; erzeugt mit `publishRelease.ps1`.
 
 **English**
 
@@ -17,3 +18,4 @@
 - Export and import of settings, MQTT broker set via `/api/mqtt`, confirmation dialogs for tare and calibration.
 - Notice for a missing HX711 or load cell, MQTT status `hx711`, offline indicator on the page.
 - Update over WiFi (ArduinoOTA), WiFi setup via USB, scripts `buildAll.bat`, `checkDevices.ps1`, `flashAll.bat`, `flashESP.bat`.
+- Release zip with the folder `build_waage` (flash scripts, `esptool.exe`, `readme.txt`, firmware) as with the clock; created by `publishRelease.ps1`.

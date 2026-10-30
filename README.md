@@ -120,7 +120,7 @@ Board-Einstellungen: ESP32C3 Dev Module, USB CDC On Boot = Enabled, 80 MHz, QIO,
 
 `flashESP.bat` und `flashAll.bat` brauchen `esptool.exe`: Liegt keines neben den Skripten, nehmen sie das aus dem Arduino-ESP32-Core. Den Stand erkennt `checkDevices.ps1` an der Kennung `WAAGE_FW_BUILD=` in der `.bin` und an `"version"` in `/api/topbarStatus`. `flashAll` listet jedes ESP32-C3 am USB und fragt vor dem Flashen.
 
-**Fertige Builds** stehen bei den [Releases](../../releases) (`waage-esp32c3.zip` mit Prüfsumme). Per USB, zum Beispiel mit esptool:
+**Fertige Builds** stehen bei den [Releases](../../releases) (`waage-esp32c3.zip` mit Prüfsumme). Das Zip enthält den Ordner `build_waage` mit `flashESP.bat`, `waagesetup.ps1`, `esptool.exe`, `readme.txt` und der Firmware im Unterordner `flash`; das Zip auspacken und `flashESP.bat` starten (siehe `readme.txt`). Das Paket erzeugt `publishRelease.ps1`. Per USB, zum Beispiel mit esptool:
 
 ```
 esptool --chip esp32c3 --port COM3 --baud 921600 write_flash 0x0 waage.ino.bootloader.bin 0x8000 waage.ino.partitions.bin 0xe000 boot_app0.bin 0x10000 waage.ino.bin
@@ -195,7 +195,7 @@ GET returns `{"broker":"...","port":1883,"connected":true}`. POST sets only the 
 
 Requires Windows, Arduino IDE 2 (provides `arduino-cli` and the ESP32 core 3.x) and the **PubSubClient** library. `buildAll.bat` builds the ESP32-C3 into `build_waage\esp32c3` and `flash`; `flashESP.bat` flashes one device over USB; `flashAll.bat` checks all scales on the network and updates outdated ones (OTA or USB); `checkDevices.ps1` lists them. Board: ESP32C3 Dev Module, USB CDC On Boot enabled, 80 MHz, QIO, 4 MB, partition scheme "Minimal SPIFFS (1.9MB APP with OTA)". Without `buildAll.bat`, run `makeWiringHeader.ps1` once by hand after changing `verkabelung.svg`.
 
-Ready builds are in the [Releases](../../releases) (`waage-esp32c3.zip` with checksum):
+Ready builds are in the [Releases](../../releases) (`waage-esp32c3.zip` with checksum). The zip contains the folder `build_waage` with `flashESP.bat`, `waagesetup.ps1`, `esptool.exe`, `readme.txt` and the firmware in the subfolder `flash`; unpack the zip and start `flashESP.bat` (see `readme.txt`). `publishRelease.ps1` creates the package. Over USB, for example with esptool:
 
 ```
 esptool --chip esp32c3 --port COM3 --baud 921600 write_flash 0x0 waage.ino.bootloader.bin 0x8000 waage.ino.partitions.bin 0xe000 boot_app0.bin 0x10000 waage.ino.bin
